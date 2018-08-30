@@ -100,6 +100,10 @@ namespace OpenMS
     defaults_.setValue("uis_threshold_peak_area", 0, "Peak area threshold to consider identification transition (set to -1 to consider all)");
     defaults_.setValue("scoring_model", "default", "Scoring model to use", ListUtils::create<String>("advanced"));
     defaults_.setValidStrings("scoring_model", ListUtils::create<String>("default,single_transition"));
+    defaults_.setValue("max_transitions", -1, "Maximum number of transitions to select for chromatographic scoring (set to -1 to consider all)");
+    defaults_.setValue("min_transitions", -1, "Minimum number of transitions to select for chromatographic scoring");
+	defaults_.setValue("max_ms1_isotopes", -1, "Maximum number of precursor isotopes (including monoisotopic precursor) to select for chromatographic scoring (set to -1 to consider all)");
+    defaults_.setValue("min_ms1_isotopes", -1, "Minimum number of precursor isotopes (including monoisotopic precursor) to select for chromatographic scoring");
 
     defaults_.insert("TransitionGroupPicker:", MRMTransitionGroupPicker().getDefaults());
 
@@ -652,18 +656,49 @@ namespace OpenMS
         transition_group_detection.getLibraryIntensity(normalized_library_intensity);
         OpenSwath::Scoring::normalize_sum(&normalized_library_intensity[0], boost::numeric_cast<int>(normalized_library_intensity.size()));
 
+        // Select transitions and precursor isotopes for scoring
+        std::vector<std::pair<double, std::string> > native_ids_intensities;
+        std::vector<std::pair<double, std::string> > precursor_ids_intensities;
+
         std::vector<std::string> native_ids_detection;
+        std::vector<std::string> precursor_ids;
+
+        // Prioritize transitions according to intensity
         for (Size i = 0; i < transition_group_detection.size(); i++)
         {
           std::string native_id = transition_group_detection.getTransitions()[i].getNativeID();
-          native_ids_detection.push_back(native_id);
+          native_ids_intensities.push_back(std::make_pair(mrmfeature->getFeature(native_id).getIntensity(), native_id));
+        }
+        sort(native_ids_intensities.rbegin(), native_ids_intensities.rbegin());
+
+        for (Size i = 0; i < native_ids_intensities.size(); i++)
+        {
+          if (i < (Size)max_transitions_ || max_transitions_ == -1)
+          {
+          	if (native_ids_intensities[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
+	          {
+	            native_ids_detection.push_back(native_ids_intensities[i].second);
+	          }
+	        }
         }
 
-        std::vector<std::string> precursor_ids;
+        // Prioritize precursors according to intensity
         for (Size i = 0; i < transition_group_detection.getPrecursorChromatograms().size(); i++)
         {
           std::string precursor_id = transition_group_detection.getPrecursorChromatograms()[i].getNativeID();
-          precursor_ids.push_back(precursor_id);
+          precursor_ids_intensities.push_back(std::make_pair(mrmfeature->getPrecursorFeature(precursor_id).getIntensity(), precursor_id));
+        }
+        sort(precursor_ids_intensities.rbegin(), precursor_ids_intensities.rbegin());
+
+        for (Size i = 0; i < precursor_ids_intensities.size(); i++) // limit to number of isotopes + monoisotopic precursor
+        {
+          if (i < (Size)max_ms1_isotopes_  || max_ms1_isotopes_ == -1)
+					{
+						if (precursor_ids_intensities[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
+	          {
+	            precursor_ids.push_back(precursor_ids_intensities[i].second);
+	          }
+					}
         }
 
         OpenSwath_Scores scores;
@@ -1026,6 +1061,10 @@ namespace OpenMS
     uis_threshold_sn_ = param_.getValue("uis_threshold_sn");
     uis_threshold_peak_area_ = param_.getValue("uis_threshold_peak_area");
     scoring_model_ = param_.getValue("scoring_model");
+    max_transitions_ = param_.getValue("max_transitions");
+    min_transitions_ = param_.getValue("min_transitions");
+    max_ms1_isotopes_ = param_.getValue("max_ms1_isotopes");
+    min_ms1_isotopes_ = param_.getValue("min_ms1_isotopes");
 
     // set SONAR values
     Param p = sonarscoring_.getDefaults();

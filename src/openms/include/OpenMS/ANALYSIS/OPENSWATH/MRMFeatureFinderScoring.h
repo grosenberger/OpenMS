@@ -299,6 +299,10 @@ private:
     double spacing_for_spectra_resampling_;
     double uis_threshold_sn_;
     double uis_threshold_peak_area_;
+    int max_transitions_;
+    int min_transitions_;
+    int max_ms1_isotopes_;
+    int min_ms1_isotopes_;
 
     // members
     std::map<OpenMS::String, const PeptideType*> PeptideRefMap_;
