@@ -213,6 +213,9 @@ public:
     /// Initialize the scoring object and building the MI matrix
     void initializeMIPrecursorMatrix(OpenSwath::IMRMFeature* mrmfeature, std::vector<String> precursor_ids);
 
+    /// Initialize the mutual information vector against all MS1 traces
+    void initializeMIPrecursorIsotopeContrastMatrix(OpenSwath::IMRMFeature* mrmfeature, const std::vector<String>& precursor_ids_set1, const std::vector<String>& precursor_ids_set2);
+
     /// Initialize the mutual information vector against the MS1 trace
     void initializeMIPrecursorContrastMatrix(OpenSwath::IMRMFeature* mrmfeature, const std::vector<String>& precursor_ids, const std::vector<String>& native_ids);
 
@@ -222,6 +225,7 @@ public:
     double calcMIScore();
     double calcMIWeightedScore(const std::vector<double>& normalized_library_intensity);
     double calcMIPrecursorScore();
+    std::string calcSeparateMIPrecursorIsotopeContrastScore();
     double calcMIPrecursorContrastScore();
     double calcMIPrecursorCombinedScore();
     std::string calcSeparateMIContrastScore();
@@ -258,6 +262,9 @@ private:
 
     /// the precomputed mutual information matrix of the MS1 trace
     std::vector< std::vector<double> > mi_precursor_matrix_;
+
+    /// the precomputed contrast mutual information matrix against all MS1 traces
+    std::vector< std::vector<double> > mi_precursor_isotope_contrast_matrix_;
 
     /// the precomputed contrast mutual information matrix against the MS1 trace
     std::vector< std::vector<double> > mi_precursor_contrast_matrix_;

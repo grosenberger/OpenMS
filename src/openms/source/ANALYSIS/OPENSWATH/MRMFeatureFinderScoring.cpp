@@ -656,49 +656,70 @@ namespace OpenMS
         transition_group_detection.getLibraryIntensity(normalized_library_intensity);
         OpenSwath::Scoring::normalize_sum(&normalized_library_intensity[0], boost::numeric_cast<int>(normalized_library_intensity.size()));
 
-        // Select transitions and precursor isotopes for scoring
-        std::vector<std::pair<double, std::string> > native_ids_intensities;
-        std::vector<std::pair<double, std::string> > precursor_ids_intensities;
+        // Select transitions for scoring
+        OpenSwath::MRMScoring pre_mrmscore_;
 
+        std::vector<std::string> native_ids_all;
         std::vector<std::string> native_ids_detection;
-        std::vector<std::string> precursor_ids;
+        std::vector<std::pair<double, std::string> > native_ids_mi;
 
-        // Prioritize transitions according to intensity
         for (Size i = 0; i < transition_group_detection.size(); i++)
         {
           std::string native_id = transition_group_detection.getTransitions()[i].getNativeID();
-          native_ids_intensities.push_back(std::make_pair(mrmfeature->getFeature(native_id).getIntensity(), native_id));
+          native_ids_all.push_back(native_id);
         }
-        sort(native_ids_intensities.rbegin(), native_ids_intensities.rbegin());
 
-        for (Size i = 0; i < native_ids_intensities.size(); i++)
+        pre_mrmscore_.initializeMIContrastMatrix(imrmfeature, native_ids_all, native_ids_all);
+        std::vector<float>native_ids_mi_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateMIContrastScore(),';');
+
+        // Prioritize transitions according to MI
+        for (Size i = 0; i < native_ids_all.size(); i++)
+        {
+          native_ids_mi.push_back(std::make_pair(native_ids_mi_[i], native_ids_all[i]));
+        }
+        sort(native_ids_mi.rbegin(), native_ids_mi.rbegin());
+
+        for (Size i = 0; i < native_ids_mi.size(); i++)
         {
           if (i < (Size)max_transitions_ || max_transitions_ == -1)
           {
-          	if (native_ids_intensities[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
+          	if (native_ids_mi[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
 	          {
-	            native_ids_detection.push_back(native_ids_intensities[i].second);
+	            native_ids_detection.push_back(native_ids_mi[i].second);
 	          }
 	        }
         }
 
-        // Prioritize precursors according to intensity
+        // Select precursor isotopes for scoring
+        std::vector<std::string> precursor_ids_all;
+        std::vector<std::string> precursor_ids;
+        std::vector<std::pair<double, std::string> > precursor_ids_mi;
+
         for (Size i = 0; i < transition_group_detection.getPrecursorChromatograms().size(); i++)
         {
           std::string precursor_id = transition_group_detection.getPrecursorChromatograms()[i].getNativeID();
-          precursor_ids_intensities.push_back(std::make_pair(mrmfeature->getPrecursorFeature(precursor_id).getIntensity(), precursor_id));
+          precursor_ids_all.push_back(precursor_id);
         }
-        sort(precursor_ids_intensities.rbegin(), precursor_ids_intensities.rbegin());
 
-        for (Size i = 0; i < precursor_ids_intensities.size(); i++) // limit to number of isotopes + monoisotopic precursor
+        pre_mrmscore_.initializeMIPrecursorIsotopeContrastMatrix(imrmfeature, precursor_ids_all, precursor_ids_all);
+        std::vector<float>precursor_ids_mi_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateMIPrecursorIsotopeContrastScore(),';');
+
+        // Prioritize precursor isotopes according to MI
+        for (Size i = 0; i < precursor_ids_all.size(); i++)
         {
-          if (i < (Size)max_ms1_isotopes_  || max_ms1_isotopes_ == -1)
-					{
-						if (precursor_ids_intensities[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
-	          {
-	            precursor_ids.push_back(precursor_ids_intensities[i].second);
-	          }
-					}
+          precursor_ids_mi.push_back(std::make_pair(precursor_ids_mi_[i], precursor_ids_all[i]));
+        }
+        sort(precursor_ids_mi.rbegin(), precursor_ids_mi.rbegin());
+
+        for (Size i = 0; i < precursor_ids_mi.size(); i++)
+        {
+          if (i < (Size)max_ms1_isotopes_ || max_ms1_isotopes_ == -1)
+          {
+            if (precursor_ids_mi[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
+            {
+              precursor_ids.push_back(precursor_ids_mi[i].second);
+            }
+          }
         }
 
         OpenSwath_Scores scores;
