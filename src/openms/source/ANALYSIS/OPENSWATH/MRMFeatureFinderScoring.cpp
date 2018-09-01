@@ -661,7 +661,7 @@ namespace OpenMS
 
         std::vector<std::string> native_ids_all;
         std::vector<std::string> native_ids_detection;
-        std::vector<std::pair<double, std::string> > native_ids_mi;
+        std::vector<std::pair<double, std::string> > native_ids_ce;
 
         for (Size i = 0; i < transition_group_detection.size(); i++)
         {
@@ -669,23 +669,23 @@ namespace OpenMS
           native_ids_all.push_back(native_id);
         }
 
-        pre_mrmscore_.initializeMIContrastMatrix(imrmfeature, native_ids_all, native_ids_all);
-        std::vector<float>native_ids_mi_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateMIContrastScore(),';');
+        pre_mrmscore_.initializeXCorrContrastMatrix(imrmfeature, native_ids_all, native_ids_all);
+        std::vector<float>native_ids_ce_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXcorrContrastCoelutionScore(),';');
 
-        // Prioritize transitions according to MI
+        // Prioritize transitions according to coelution
         for (Size i = 0; i < native_ids_all.size(); i++)
         {
-          native_ids_mi.push_back(std::make_pair(native_ids_mi_[i], native_ids_all[i]));
+          native_ids_ce.push_back(std::make_pair(native_ids_ce_[i], native_ids_all[i]));
         }
-        sort(native_ids_mi.rbegin(), native_ids_mi.rbegin());
+        sort(native_ids_ce.begin(), native_ids_ce.end());
 
-        for (Size i = 0; i < native_ids_mi.size(); i++)
+        for (Size i = 0; i < native_ids_ce.size(); i++)
         {
           if (i < (Size)max_transitions_ || max_transitions_ == -1)
           {
-          	if (native_ids_mi[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
+          	if (native_ids_ce[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
 	          {
-	            native_ids_detection.push_back(native_ids_mi[i].second);
+	            native_ids_detection.push_back(native_ids_ce[i].second);
 	          }
 	        }
         }
@@ -693,7 +693,7 @@ namespace OpenMS
         // Select precursor isotopes for scoring
         std::vector<std::string> precursor_ids_all;
         std::vector<std::string> precursor_ids;
-        std::vector<std::pair<double, std::string> > precursor_ids_mi;
+        std::vector<std::pair<double, std::string> > precursor_ids_ce;
 
         for (Size i = 0; i < transition_group_detection.getPrecursorChromatograms().size(); i++)
         {
@@ -701,23 +701,23 @@ namespace OpenMS
           precursor_ids_all.push_back(precursor_id);
         }
 
-        pre_mrmscore_.initializeMIPrecursorIsotopeContrastMatrix(imrmfeature, precursor_ids_all, precursor_ids_all);
-        std::vector<float>precursor_ids_mi_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateMIPrecursorIsotopeContrastScore(),';');
+        pre_mrmscore_.initializeXCorrPrecursorIsotopeContrastMatrix(imrmfeature, precursor_ids_all, precursor_ids_all);
+        std::vector<float>precursor_ids_ce_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXCorrPrecursorIsotopeContrastCoelutionScore(),';');
 
-        // Prioritize precursor isotopes according to MI
+        // Prioritize precursor isotopes according to coelution
         for (Size i = 0; i < precursor_ids_all.size(); i++)
         {
-          precursor_ids_mi.push_back(std::make_pair(precursor_ids_mi_[i], precursor_ids_all[i]));
+          precursor_ids_ce.push_back(std::make_pair(precursor_ids_ce_[i], precursor_ids_all[i]));
         }
-        sort(precursor_ids_mi.rbegin(), precursor_ids_mi.rbegin());
+        sort(precursor_ids_ce.begin(), precursor_ids_ce.end());
 
-        for (Size i = 0; i < precursor_ids_mi.size(); i++)
+        for (Size i = 0; i < precursor_ids_ce.size(); i++)
         {
           if (i < (Size)max_ms1_isotopes_ || max_ms1_isotopes_ == -1)
           {
-            if (precursor_ids_mi[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
+            if (precursor_ids_ce[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
             {
-              precursor_ids.push_back(precursor_ids_mi[i].second);
+              precursor_ids.push_back(precursor_ids_ce[i].second);
             }
           }
         }

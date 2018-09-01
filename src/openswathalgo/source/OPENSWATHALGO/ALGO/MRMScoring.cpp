@@ -192,6 +192,29 @@ namespace OpenSwath
     }
   }
 
+  void MRMScoring::initializeXCorrPrecursorIsotopeContrastMatrix(OpenSwath::IMRMFeature* mrmfeature, const std::vector<String>& precursor_ids_set1, const std::vector<String>& precursor_ids_set2)
+  {
+    std::vector<double> intensityi, intensityj;
+    xcorr_precursor_isotope_contrast_matrix_.resize(precursor_ids_set1.size());
+    for (std::size_t i = 0; i < precursor_ids_set1.size(); i++)
+    { 
+      String precursor_id1 = precursor_ids_set1[i];
+      FeatureType fi = mrmfeature->getPrecursorFeature(precursor_id1);
+      xcorr_precursor_isotope_contrast_matrix_[i].resize(precursor_ids_set2.size());
+      intensityi.clear();
+      fi->getIntensity(intensityi);
+      for (std::size_t j = 0; j < precursor_ids_set2.size(); j++)
+      {
+        String precursor_id2 = precursor_ids_set2[j];
+        FeatureType fj = mrmfeature->getPrecursorFeature(precursor_id2);
+        intensityj.clear();
+        fj->getIntensity(intensityj);
+        // compute normalized cross correlation
+        xcorr_precursor_isotope_contrast_matrix_[i][j] = Scoring::normalizedCrossCorrelation(intensityi, intensityj, boost::numeric_cast<int>(intensityi.size()), 1);
+      }
+    }
+  }
+
   // see /IMSB/users/reiterl/bin/code/biognosys/trunk/libs/mrm_libs/MRM_pgroup.pm
   // _calc_xcorr_coelution_score
   //
@@ -399,6 +422,36 @@ namespace OpenSwath
 
     double xcorr_coelution_score = deltas_mean + deltas_stdv;
     return xcorr_coelution_score;
+  }
+
+  std::string MRMScoring::calcSeparateXCorrPrecursorIsotopeContrastCoelutionScore()
+  {
+    OPENSWATH_PRECONDITION(xcorr_precursor_isotope_contrast_matrix_.size() > 0 && xcorr_precursor_isotope_contrast_matrix_[0].size() > 1, "Expect cross-correlation matrix of at least 1x2");
+
+    std::vector<double> deltas;
+    for (std::size_t i = 0; i < xcorr_precursor_isotope_contrast_matrix_.size(); i++)
+    {
+      double deltas_id = 0;
+      for (std::size_t  j = 0; j < xcorr_precursor_isotope_contrast_matrix_[0].size(); j++)
+      {
+        // first is the X value (RT), should be an int
+        deltas_id += std::abs(Scoring::xcorrArrayGetMaxPeak(xcorr_precursor_isotope_contrast_matrix_[i][j])->first);
+#ifdef MRMSCORING_TESTING
+        std::cout << "&&_xcoel append " << std::abs(Scoring::xcorrArrayGetMaxPeak(xcorr_precursor_isotope_contrast_matrix_[i][j])->first) << std::endl;
+#endif
+      }
+      deltas.push_back(deltas_id / xcorr_precursor_isotope_contrast_matrix_[0].size());
+    }
+
+    std::stringstream ss;
+    for (size_t i = 0; i < deltas.size(); i++)
+    {
+      if (i != 0)
+        ss << ";";
+      ss << deltas[i];
+    }
+
+    return ss.str();
   }
 
   // see /IMSB/users/reiterl/bin/code/biognosys/trunk/libs/mrm_libs/MRM_pgroup.pm
@@ -761,29 +814,6 @@ namespace OpenSwath
     }
   }
 
-  void MRMScoring::initializeMIPrecursorIsotopeContrastMatrix(OpenSwath::IMRMFeature* mrmfeature, const std::vector<String>& precursor_ids_set1, const std::vector<String>& precursor_ids_set2)
-  {
-    std::vector<double> intensityi, intensityj;
-    mi_precursor_isotope_contrast_matrix_.resize(precursor_ids_set1.size());
-    for (std::size_t i = 0; i < precursor_ids_set1.size(); i++)
-    { 
-      String precursor_id1 = precursor_ids_set1[i];
-      FeatureType fi = mrmfeature->getPrecursorFeature(precursor_id1);
-      mi_precursor_isotope_contrast_matrix_[i].resize(precursor_ids_set2.size());
-      intensityi.clear();
-      fi->getIntensity(intensityi);
-      for (std::size_t j = 0; j < precursor_ids_set2.size(); j++)
-      {
-        String precursor_id2 = precursor_ids_set2[j];
-        FeatureType fj = mrmfeature->getPrecursorFeature(precursor_id2);
-        intensityj.clear();
-        fj->getIntensity(intensityj);
-        // compute ranked mutual information
-        mi_precursor_isotope_contrast_matrix_[i][j] = Scoring::rankedMutualInformation(intensityi, intensityj);
-      }
-    }
-  }
-
   void MRMScoring::initializeMIPrecursorContrastMatrix(OpenSwath::IMRMFeature* mrmfeature, const std::vector<String>& precursor_ids, const std::vector<String>& native_ids)
   {
     std::vector<double> intensityi, intensityj;
@@ -904,32 +934,6 @@ namespace OpenSwath
     OpenSwath::mean_and_stddev msc;
     msc = std::for_each(mi_scores.begin(), mi_scores.end(), msc);
     return msc.mean();
-  }
-
-  std::string MRMScoring::calcSeparateMIPrecursorIsotopeContrastScore()
-  {
-    OPENSWATH_PRECONDITION(mi_precursor_isotope_contrast_matrix_.size() > 0 && mi_precursor_isotope_contrast_matrix_[0].size() > 1, "Expect mutual information matrix of at least 1x2");
-
-    std::vector<double> mi_scores;
-    for (std::size_t i = 0; i < mi_precursor_isotope_contrast_matrix_.size(); i++)
-    {
-      double mi_scores_id = 0;
-      for (std::size_t j = 0; j < mi_precursor_isotope_contrast_matrix_[0].size(); j++)
-      {
-        mi_scores_id += mi_precursor_isotope_contrast_matrix_[i][j];
-      }
-      mi_scores.push_back(mi_scores_id / mi_precursor_isotope_contrast_matrix_[0].size());
-    }
-
-    std::stringstream ss;
-    for (size_t i = 0; i <mi_scores.size(); i++)
-    {
-      if (i != 0)
-        ss << ";";
-      ss << mi_scores[i];
-    }
-
-    return ss.str();
   }
 
   double MRMScoring::calcMIPrecursorContrastScore()
