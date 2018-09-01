@@ -677,7 +677,7 @@ namespace OpenMS
         {
           native_ids_mi.push_back(std::make_pair(native_ids_mi_[i], native_ids_all[i]));
         }
-        sort(native_ids_mi.rbegin(), native_ids_mi.rbegin());
+        sort(native_ids_mi.rbegin(), native_ids_mi.rend());
 
         for (Size i = 0; i < native_ids_mi.size(); i++)
         {
@@ -709,7 +709,7 @@ namespace OpenMS
         {
           precursor_ids_mi.push_back(std::make_pair(precursor_ids_mi_[i], precursor_ids_all[i]));
         }
-        sort(precursor_ids_mi.rbegin(), precursor_ids_mi.rbegin());
+        sort(precursor_ids_mi.rbegin(), precursor_ids_mi.rend());
 
         for (Size i = 0; i < precursor_ids_mi.size(); i++)
         {
