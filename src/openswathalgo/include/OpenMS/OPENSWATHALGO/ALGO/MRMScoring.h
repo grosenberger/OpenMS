@@ -175,6 +175,9 @@ public:
     /// calculate the precursor cross-correlation shape score including the transitions
     double calcXcorrPrecursorCombinedShapeScore();
 
+    /// calculate the precursor cross-correlation contrast score against the other isotopes
+    std::string calcSeparateXCorrPrecursorIsotopeContrastShapeScore();
+
     /// calculate the library correlation score
     static void calcLibraryScore(OpenSwath::IMRMFeature* mrmfeature,
       const std::vector<TransitionType>& transitions, double& correlation, 

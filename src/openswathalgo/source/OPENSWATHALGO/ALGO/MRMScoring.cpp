@@ -611,6 +611,33 @@ namespace OpenSwath
     return msc.mean();
   }
 
+  std::string MRMScoring::calcSeparateXCorrPrecursorIsotopeContrastShapeScore()
+  {
+    OPENSWATH_PRECONDITION(xcorr_precursor_isotope_contrast_matrix_.size() > 0 && xcorr_precursor_isotope_contrast_matrix_[0].size() > 1, "Expect cross-correlation matrix of at least 1x2");
+
+    std::vector<double> intensities;
+    for (std::size_t i = 0; i < xcorr_precursor_isotope_contrast_matrix_.size(); i++)
+    {
+      double intensities_id = 0;
+      for (std::size_t j = 0; j < xcorr_precursor_isotope_contrast_matrix_[0].size(); j++)
+      {
+        // second is the Y value (intensity)
+        intensities_id += Scoring::xcorrArrayGetMaxPeak(xcorr_precursor_isotope_contrast_matrix_[i][j])->second;
+      }
+      intensities.push_back(intensities_id / xcorr_precursor_isotope_contrast_matrix_[0].size());
+    }
+
+    std::stringstream ss;
+    for (size_t i = 0; i <intensities.size(); i++)
+    {
+      if (i != 0)
+        ss << ";";
+      ss << intensities[i];
+    }
+
+    return ss.str();
+  }
+
   void MRMScoring::calcLibraryScore(OpenSwath::IMRMFeature* mrmfeature, const std::vector<TransitionType>& transitions,
                                     double& correlation, double& norm_manhattan, double& manhattan, double& dotprod, double& spectral_angle, double& rmsd)
   {

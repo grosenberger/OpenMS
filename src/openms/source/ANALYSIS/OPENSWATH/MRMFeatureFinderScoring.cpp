@@ -661,7 +661,7 @@ namespace OpenMS
 
         std::vector<std::string> native_ids_all;
         std::vector<std::string> native_ids_detection;
-        std::vector<std::pair<double, std::string> > native_ids_ce;
+        std::vector<std::pair<double, std::string> > native_ids_xc;
 
         for (Size i = 0; i < transition_group_detection.size(); i++)
         {
@@ -670,22 +670,22 @@ namespace OpenMS
         }
 
         pre_mrmscore_.initializeXCorrContrastMatrix(imrmfeature, native_ids_all, native_ids_all);
-        std::vector<float>native_ids_ce_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXcorrContrastCoelutionScore(),';');
+        std::vector<float>native_ids_xc_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXcorrContrastShapeScore(),';');
 
-        // Prioritize transitions according to coelution
+        // Prioritize transitions according to weighted shape
         for (Size i = 0; i < native_ids_all.size(); i++)
         {
-          native_ids_ce.push_back(std::make_pair(native_ids_ce_[i], native_ids_all[i]));
+          native_ids_xc.push_back(std::make_pair(native_ids_xc_[i] * std::log(mrmfeature->getFeature(native_ids_all[i]).getIntensity() + 1), native_ids_all[i]));
         }
-        sort(native_ids_ce.begin(), native_ids_ce.end());
+        sort(native_ids_xc.rbegin(), native_ids_xc.rend());
 
-        for (Size i = 0; i < native_ids_ce.size(); i++)
+        for (Size i = 0; i < native_ids_xc.size(); i++)
         {
           if (i < (Size)max_transitions_ || max_transitions_ == -1)
           {
-          	if (native_ids_ce[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
+          	if (native_ids_xc[i].first > 0 || i < (Size)min_transitions_ || min_transitions_ == -1)
 	          {
-	            native_ids_detection.push_back(native_ids_ce[i].second);
+	            native_ids_detection.push_back(native_ids_xc[i].second);
 	          }
 	        }
         }
@@ -693,7 +693,7 @@ namespace OpenMS
         // Select precursor isotopes for scoring
         std::vector<std::string> precursor_ids_all;
         std::vector<std::string> precursor_ids;
-        std::vector<std::pair<double, std::string> > precursor_ids_ce;
+        std::vector<std::pair<double, std::string> > precursor_ids_xc;
 
         for (Size i = 0; i < transition_group_detection.getPrecursorChromatograms().size(); i++)
         {
@@ -702,22 +702,22 @@ namespace OpenMS
         }
 
         pre_mrmscore_.initializeXCorrPrecursorIsotopeContrastMatrix(imrmfeature, precursor_ids_all, precursor_ids_all);
-        std::vector<float>precursor_ids_ce_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXCorrPrecursorIsotopeContrastCoelutionScore(),';');
+        std::vector<float>precursor_ids_xc_ = ListUtils::create<float>(pre_mrmscore_.calcSeparateXCorrPrecursorIsotopeContrastShapeScore(),';');
 
-        // Prioritize precursor isotopes according to coelution
+        // Prioritize precursor isotopes according to weighted shape
         for (Size i = 0; i < precursor_ids_all.size(); i++)
         {
-          precursor_ids_ce.push_back(std::make_pair(precursor_ids_ce_[i], precursor_ids_all[i]));
+          precursor_ids_xc.push_back(std::make_pair(precursor_ids_xc_[i] * std::log(mrmfeature->getPrecursorFeature(precursor_ids_all[i]).getIntensity() + 1), precursor_ids_all[i]));
         }
-        sort(precursor_ids_ce.begin(), precursor_ids_ce.end());
+        sort(precursor_ids_xc.rbegin(), precursor_ids_xc.rend());
 
-        for (Size i = 0; i < precursor_ids_ce.size(); i++)
+        for (Size i = 0; i < precursor_ids_xc.size(); i++)
         {
           if (i < (Size)max_ms1_isotopes_ || max_ms1_isotopes_ == -1)
           {
-            if (precursor_ids_ce[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
+            if (precursor_ids_xc[i].first > 0 || i < (Size)min_ms1_isotopes_ || min_ms1_isotopes_ == -1)
             {
-              precursor_ids.push_back(precursor_ids_ce[i].second);
+              precursor_ids.push_back(precursor_ids_xc[i].second);
             }
           }
         }
