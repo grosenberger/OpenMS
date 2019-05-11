@@ -1,0 +1,12 @@
+FROM grosenberger/openms_contrib:latest
+
+# build OpenMS
+WORKDIR /code
+RUN mkdir OpenMS_build
+ADD . /code/OpenMS
+
+WORKDIR /code/OpenMS_build
+
+RUN cmake -DOPENMS_CONTRIB_LIBS="/code/contrib/" -DCMAKE_PREFIX_PATH="/usr/;/usr/local" -DBOOST_USE_STATIC=OFF ../OpenMS -DENABLE_DOCS=OFF -DENABLE_TUTORIALS=OFF -DPYOPENMS=OFF -DHAS_XSERVER=OFF -DWITH_GUI=OFF -DGIT_TRACKING=ON
+RUN make OpenMS
+WORKDIR /
